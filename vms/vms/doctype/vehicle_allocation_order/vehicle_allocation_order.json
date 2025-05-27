@@ -17,6 +17,7 @@
   "section_break_akdj",
   "order_qty",
   "pending_qty",
+  "allocated_volume",
   "column_break_jdaf",
   "allocated_qty",
   "allocated_weight"
@@ -117,17 +118,23 @@
    "label": "Route",
    "options": "Route",
    "read_only": 1
+  },
+  {
+   "fieldname": "allocated_volume",
+   "fieldtype": "Float",
+   "label": "Allocated Volume"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2024-08-30 14:55:01.393890",
+ "modified": "2025-05-27 19:16:09.645520",
  "modified_by": "Administrator",
  "module": "VMS",
  "name": "Vehicle Allocation Order",
  "owner": "Administrator",
  "permissions": [],
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": []
