@@ -166,15 +166,21 @@ class VehicleAllocation(Document):
 	def calculate_allocated_qty(self):
 		self.allocated_qty = 0
 		self.allocated_weight = 0
+		self.allocated_volume = 0
 		for order in self.orders:
 			self.allocated_qty += order.allocated_qty
 			self.allocated_weight += order.allocated_weight
+			self.allocated_volume += order.allocated_volume or 0
 
 		if self.allocated_qty > self.qty_capacity:
-			frappe.msgprint(_("Allocated quantity is more than vehicle capacity."))
+			frappe.throw(_("Allocated quantity is more than vehicle capacity."))
 
-		if self.allocated_weight > self.weight_capacity:
-			frappe.msgprint(_("Allocated weight is more than vehicle capacity."))
+		if self.allocated_weight > self.weight_capacity:	
+			frappe.throw(_("Allocated weight is more than vehicle capacity."))
+   
+		if self.allocated_volume > self.volume_capacity:  # NEW: check volume capacity
+				frappe.throw(_("Allocated volume is more than vehicle capacity."))
+   
 
 	def check_availability(self):
 		duplicate = frappe.db.get_all(
@@ -224,6 +230,7 @@ class VehicleAllocation(Document):
 					so.company,
 					so.transaction_date,
 					so.route,
+					soi.custom_volume_per_unit,
 					soi.name.as_("sales_order_detail"),
 					soi.item_code.as_("item"),
 					(soi.qty - soi.allocated_qty).as_("qty"),
@@ -232,6 +239,8 @@ class VehicleAllocation(Document):
 					soi.uom,
 					soi.stock_qty,
 					(soi.weight_per_unit * (soi.qty)).as_("weight"),
+     				(soi.custom_volume_per_unit * (soi.qty)).as_("volume"),
+
 				)
 				.where(so.docstatus == 1)
 				.where(so.company == company)
@@ -241,6 +250,7 @@ class VehicleAllocation(Document):
 				.where((soi.billed_amt) < (soi.amount))
 				.orderby(so.transaction_date)
 			)
+			print(soi.volume)
 			if exclude:
 				result = result.where(soi.name.notin(exclude))
 			if territories:
@@ -274,6 +284,7 @@ class VehicleAllocation(Document):
 					"uom": order.get("uom"),
 					"stock_qty": order.get("stock_qty"),
 					"weight": order.get("weight"),
+					"volume":order.get("volume"),
 					"sales_order": order.get("sales_order"),
 					"customer": order.get("customer"),
 					"date": order.get("date"),
@@ -283,5 +294,8 @@ class VehicleAllocation(Document):
 					"order_qty": order.get("order_qty"),
 				}
 			)
+			print(order_details,9999999999)
+
 
 		return {"orders": list(order_dict.values()), "items": order_details}
+		

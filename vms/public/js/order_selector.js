@@ -72,11 +72,13 @@ vms.OrderSelector = class OrderSelector {
 						<td class="text-center">Capacity</td>
 						<td class="text-center">${flt(this.frm.doc.qty_capacity, 2)}</td>
 						<td class="text-center">${flt(this.frm.doc.weight_capacity, 2)}</td>
+						<td class="text-center">${flt(this.frm.doc.volume_capacity, 2)}</td>
 					</tr>
 					<tr>
 						<td class="text-center">Allocated</td>
 						<td class="pop_allotted_qty text-center">${flt(this.frm.doc.allocated_qty, 2)}</td>
 						<td class="pop_allotted_wt text-center">${flt(this.frm.doc.allocated_weight, 2)}</td>
+						<td class="pop_allotted_wt text-center">${flt(this.frm.doc.allocated_capacity, 2)}</td>
 					</tr>
 					<tr>
 						<td class="text-center">Remaining</td>
@@ -86,6 +88,10 @@ vms.OrderSelector = class OrderSelector {
 						)}</td>
 						<td class="pop_rem_wt text-center">${flt(
 							this.frm.doc.weight_capacity - this.frm.doc.allocated_weight,
+							2
+						)}</td>
+						<td class="pop_rem_wt text-center">${flt(
+							this.frm.doc.weight_capacity - this.frm.doc.allocated_volume,
 							2
 						)}</td>
 					</tr>
@@ -145,6 +151,7 @@ vms.OrderSelector = class OrderSelector {
 					qty: Number(row.attr("data-qty")),
 					order_qty: Number(row.attr("data-order-qty")),
 					weight: Number(row.attr("data-weight")),
+					volume: Number(row.attr("data-volume")),
 					customer: row.attr("data-customer"),
 					item: row.attr("data-item"),
 					route: row.attr("data-route"),
@@ -271,14 +278,30 @@ vms.OrderSelector = class OrderSelector {
 				)}</span>`
 			);
 		}
+		if (this.frm.doc.volume_capacity > allocated_volume) {
+			$(".pop_rem_wt").html(
+				`<span style="color: green">${flt(
+					this.frm.doc.volume_capacity - allocated_volume,
+					2
+				)}</span>`
+			);
+		} else {
+			$(".pop_rem_wt").html(
+				`<span style="color: red">${flt(
+					this.frm.doc.volume_capacity - allocated_volume,
+					2
+				)}</span>`
+			);
+		}
 
 		$(".pop_allotted_qty").text(allocated_qty);
 		$(".pop_allotted_wt").text(allocated_wt);
+		$(".pop_allotted_wt").text(allocated_volume);
 	}
 
 	async get_data() {
 		let me = this;
-		me.item_columns = ["item", "qty", "weight"];
+		me.item_columns = ["item", "qty", "weight","volume"];
 		me.order_columns = ["sales_order", "customer", "date", "company"];
 		me.results.empty();
 
@@ -319,6 +342,8 @@ vms.OrderSelector = class OrderSelector {
 						row.pending_qty = data.qty;
 						row.unit_weight = flt(data.weight / data.qty, 2);
 						row.allocated_weight = data.weight;
+						row.unit_volume = flt(data.volume / data.qty, 2);
+						row.allocated_volume = data.volume;
 						row.route = data.route || "";
 					}
 				}
@@ -345,6 +370,7 @@ vms.OrderSelector = class OrderSelector {
 			item: 200,
 			qty: 40,
 			weight: 50,
+			volume: 50,
 		};
 
 		columns.forEach(function (column) {
@@ -408,6 +434,7 @@ vms.OrderSelector = class OrderSelector {
                     data-company = "${result.company}"
                     data-item = "${result.item}"
                     data-weight = "${result.weight}"
+					data-volume = "${result.volume}"
                     data-rate = "${result.rate}"
                     data-order-qty = "${result.order_qty}"
                     data-qty = "${result.qty}"
@@ -435,6 +462,7 @@ vms.OrderSelector = class OrderSelector {
 					checked_values["order_qty"] = Number($(this).attr("data-order-qty"));
 					checked_values["rate"] = Number($(this).attr("data-rate"));
 					checked_values["weight"] = Number($(this).attr("data-weight"));
+					checked_values["volume"] = Number($(this).attr("data-volume"));
 					checked_values["route"] = $(this).attr("data-route");
 					checked_values["transaction_date"] = $(this).attr("data-transaction-date");
 
@@ -459,6 +487,7 @@ vms.OrderSelector = class OrderSelector {
 					checked_values["order_qty"] = Number($(this).attr("data-order-qty"));
 					checked_values["rate"] = Number($(this).attr("data-rate"));
 					checked_values["weight"] = Number($(this).attr("data-weight"));
+					checked_values["volume"] = Number($(this).attr("data-volume"));
 					checked_values["route"] = $(this).attr("data-route");
 					checked_values["transaction_date"] = $(this).attr("data-transaction-date");
 

@@ -19,9 +19,11 @@
   "section_break_dzbk",
   "qty_capacity",
   "weight_capacity",
+  "volume_capacity",
   "column_break_zsan",
   "allocated_qty",
   "allocated_weight",
+  "allocated_volume",
   "orders_tab",
   "orders",
   "connections_tab"
@@ -142,6 +144,17 @@
    "fieldtype": "Tab Break",
    "label": "Connections",
    "show_dashboard": 1
+  },
+  {
+   "fieldname": "volume_capacity",
+   "fieldtype": "Float",
+   "label": "Volume Capacity"
+  },
+  {
+   "fieldname": "allocated_volume",
+   "fieldtype": "Float",
+   "label": "Allocated Volume",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -153,7 +166,7 @@
    "link_fieldname": "vehicle_allocation"
   }
  ],
- "modified": "2024-08-30 15:53:08.741113",
+ "modified": "2025-05-21 17:31:51.875455",
  "modified_by": "Administrator",
  "module": "VMS",
  "name": "Vehicle Allocation",
@@ -176,6 +189,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": []
