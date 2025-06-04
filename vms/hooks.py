@@ -30,7 +30,7 @@ app_include_js = [
 # page_js = {"page" : "public/js/file.js"}
 
 doctype_js = {
-    "Item": "public/js/item.js"
+    # "Item": "public/js/item.js"
 }
 # Svg Icons
 # ------------------
@@ -121,14 +121,13 @@ doctype_js = {
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
 
+    "Item":{
+        "validate":"vms.events.item.validate"
+    },
+    
+}
 # Scheduled Tasks
 # ---------------
 

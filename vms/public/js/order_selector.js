@@ -65,6 +65,7 @@ vms.OrderSelector = class OrderSelector {
 						<th class="text-center"></th>
 						<th class="text-center">Qty</th>
 						<th class="text-center">Kg</th>
+						<th class="text-center">volume</th>
 					</tr>
 				</thead>
 				<tbody>
