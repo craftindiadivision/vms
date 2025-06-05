@@ -30,7 +30,7 @@ app_include_js = [
 # page_js = {"page" : "public/js/file.js"}
 
 doctype_js = {
-    # "Item": "public/js/item.js"
+    "Customer": "public/js/customer.js"
 }
 # Svg Icons
 # ------------------

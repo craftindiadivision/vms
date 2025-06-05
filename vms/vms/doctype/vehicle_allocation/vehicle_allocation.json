@@ -10,6 +10,7 @@
   "naming_series",
   "vehicle",
   "driver",
+  "driver_name",
   "territories",
   "column_break_qglz",
   "allocation_date",
@@ -155,6 +156,14 @@
    "fieldtype": "Float",
    "label": "Allocated Volume",
    "read_only": 1
+  },
+  {
+   "fetch_from": "driver.full_name",
+   "fetch_if_empty": 1,
+   "fieldname": "driver_name",
+   "fieldtype": "Data",
+   "label": "Driver Name",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -166,7 +175,7 @@
    "link_fieldname": "vehicle_allocation"
   }
  ],
- "modified": "2025-05-27 19:04:14.831109",
+ "modified": "2025-06-05 23:33:35.277324",
  "modified_by": "Administrator",
  "module": "VMS",
  "name": "Vehicle Allocation",
