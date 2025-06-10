@@ -230,7 +230,7 @@ class VehicleAllocation(Document):
 					so.company,
 					so.transaction_date,
 					so.route,
-					soi.custom_volume_per_unit,
+					soi.custom_volume_per_case,
 					soi.name.as_("sales_order_detail"),
 					soi.item_code.as_("item"),
 					(soi.qty - soi.allocated_qty).as_("qty"),
@@ -239,7 +239,7 @@ class VehicleAllocation(Document):
 					soi.uom,
 					soi.stock_qty,
 					(soi.weight_per_unit * (soi.qty)).as_("weight"),
-     				(soi.custom_volume_per_unit * (soi.qty)).as_("volume"),
+     				(soi.custom_volume_per_case * (soi.qty)).as_("volume"),
 
 				)
 				.where(so.docstatus == 1)
@@ -250,7 +250,6 @@ class VehicleAllocation(Document):
 				.where((soi.billed_amt) < (soi.amount))
 				.orderby(so.transaction_date)
 			)
-			print(soi.volume)
 			if exclude:
 				result = result.where(soi.name.notin(exclude))
 			if territories:
@@ -294,7 +293,6 @@ class VehicleAllocation(Document):
 					"order_qty": order.get("order_qty"),
 				}
 			)
-			print(order_details,9999999999)
 
 
 		return {"orders": list(order_dict.values()), "items": order_details}
