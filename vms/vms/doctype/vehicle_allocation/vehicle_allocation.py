@@ -238,7 +238,7 @@ class VehicleAllocation(Document):
 					soi.rate,
 					soi.uom,
 					soi.stock_qty,
-					(soi.weight_per_unit * (soi.qty)).as_("weight"),
+					(soi.weight_per_unit * (soi.stock_qty)).as_("weight"),
      				(soi.custom_volume_per_case * (soi.qty)).as_("volume"),
 
 				)
