@@ -13,10 +13,10 @@
   "driver_name",
   "territories",
   "column_break_qglz",
+  "company",
   "allocation_date",
   "delivery_date",
   "routes",
-  "amended_from",
   "section_break_dzbk",
   "qty_capacity",
   "weight_capacity",
@@ -25,6 +25,7 @@
   "allocated_qty",
   "allocated_weight",
   "allocated_volume",
+  "amended_from",
   "orders_tab",
   "orders",
   "connections_tab"
@@ -83,6 +84,7 @@
    "reqd": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "orders",
    "fieldtype": "Table",
    "label": "Orders",
@@ -117,12 +119,14 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "allocated_qty",
    "fieldtype": "Float",
    "label": "Allocated Qty",
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "allocated_weight",
    "fieldtype": "Float",
    "label": "Allocated Weight",
@@ -152,6 +156,7 @@
    "label": "Volume Capacity"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "allocated_volume",
    "fieldtype": "Float",
    "label": "Allocated Volume",
@@ -164,6 +169,12 @@
    "fieldtype": "Data",
    "label": "Driver Name",
    "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
   }
  ],
  "index_web_pages_for_search": 1,
@@ -173,9 +184,14 @@
    "group": "Invoice",
    "link_doctype": "Sales Invoice",
    "link_fieldname": "vehicle_allocation"
+  },
+  {
+   "group": "invoice",
+   "link_doctype": "Delivery Note",
+   "link_fieldname": "custom_vehicle_allocation"
   }
  ],
- "modified": "2025-06-05 23:33:35.277324",
+ "modified": "2025-06-23 19:08:39.312272",
  "modified_by": "Administrator",
  "module": "VMS",
  "name": "Vehicle Allocation",
