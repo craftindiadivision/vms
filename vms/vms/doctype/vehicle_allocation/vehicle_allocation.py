@@ -32,7 +32,8 @@ class VehicleAllocation(Document):
   
 	def on_update_after_submit(self):
 		self.calculate_allocated_qty()
-     
+		self.update_allocated_qty()
+		
 
 	def update_allocated_qty(self):
 		if self.docstatus == 1:
@@ -525,9 +526,16 @@ def reallocate_order(source_doc, sales_order, target_allocation):
 
         source.remove(row)
 
+    # Recalculate allocation values for both docs
+    source.calculate_allocated_qty()
+    target.calculate_allocated_qty()
+    source.update_allocated_qty()
+    target.update_allocated_qty()
+
     source.save(ignore_version=True)
     target.save(ignore_version=True)
     frappe.db.commit()
+
 
     frappe.msgprint(f"Sales Order {sales_order} moved to Vehicle Allocation {target_allocation}")
     
@@ -563,8 +571,13 @@ def remove_sales_order(docname, sales_order):
         dn_doc.custom_vehicle_allocation = None
         dn_doc.save(ignore_permissions=True)
 
+    # Recalculate allocation values after removal
+    doc.calculate_allocated_qty()
+    doc.update_allocated_qty()
+
     doc.save(ignore_permissions=True)
     frappe.db.commit()
+
 
     frappe.msgprint(f"Sales Order {sales_order} removed from Vehicle Allocation {docname} and unlinked from delivery note")
 
