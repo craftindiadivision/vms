@@ -80,8 +80,7 @@
   {
    "fieldname": "delivery_date",
    "fieldtype": "Date",
-   "label": "Delivery Date",
-   "reqd": 1
+   "label": "Delivery Date"
   },
   {
    "allow_on_submit": 1,
@@ -152,9 +151,12 @@
    "show_dashboard": 1
   },
   {
+   "fetch_from": "vehicle.custom_volume_capacity",
+   "fetch_if_empty": 1,
    "fieldname": "volume_capacity",
    "fieldtype": "Float",
-   "label": "Volume Capacity"
+   "label": "Volume Capacity",
+   "read_only": 1
   },
   {
    "allow_on_submit": 1,
@@ -192,7 +194,7 @@
    "link_fieldname": "custom_vehicle_allocation"
   }
  ],
- "modified": "2025-06-26 12:30:43.653189",
+ "modified": "2025-06-30 13:22:15.754174",
  "modified_by": "Administrator",
  "module": "VMS",
  "name": "Vehicle Allocation",

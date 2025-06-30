@@ -258,13 +258,15 @@ class VehicleAllocation(Document):
 
 	@frappe.whitelist()
 	def get_order_items(self):
-		routes = [d.route for d in self.routes]
-		territories = [d.territory for d in self.territories]
+		routes = [d.route for d in self.routes if d.route]
+		territories = [d.territory for d in self.territories if d.territory]
+		delivery_date = self.delivery_date
 
-		draft_allocations = (
-			frappe.db.get_all("Vehicle Allocation", filters={"docstatus": 0}, pluck="name") or []
-		)
+		draft_allocations = frappe.db.get_all(
+			"Vehicle Allocation", filters={"docstatus": 0}, pluck="name"
+		) or []
 		draft_allocations.append(self.name)
+
 		exclude = []
 		if draft_allocations:
 			exclude = frappe.db.get_all(
@@ -278,12 +280,12 @@ class VehicleAllocation(Document):
 
 		DateFormat = CustomFunction("DATE_FORMAT", ["date", "format"])
 		orders = []
+
 		company_list = frappe.db.get_all("Company", pluck="name", order_by="name desc")
 		for company in company_list:
-			result = (
+			query = (
 				frappe.qb.from_(so)
-				.inner_join(soi)
-				.on(soi.parent == so.name)
+				.inner_join(soi).on(soi.parent == so.name)
 				.select(
 					so.name.as_("sales_order"),
 					so.customer,
@@ -300,8 +302,7 @@ class VehicleAllocation(Document):
 					soi.uom,
 					soi.stock_qty,
 					(soi.weight_per_unit * (soi.stock_qty)).as_("weight"),
-     				(soi.custom_volume_per_case * (soi.qty)).as_("volume"),
-
+					(soi.custom_volume_per_case * (soi.qty)).as_("volume"),
 				)
 				.where(so.docstatus == 1)
 				.where(so.company == company)
@@ -309,18 +310,22 @@ class VehicleAllocation(Document):
 				.where(soi.allocated_qty < soi.qty)
 				.where(soi.delivered_qty < soi.qty)
 				.where((soi.billed_amt) < (soi.amount))
-        		.where(so.delivery_date == self.delivery_date)
-				.orderby(so.transaction_date)
 			)
-			if exclude:
-				result = result.where(soi.name.notin(exclude))
+
+			if delivery_date:
+				query = query.where(so.delivery_date == delivery_date)
 			if territories:
-				result = result.where(so.territory.isin(territories))
+				query = query.where(so.territory.isin(territories))
 			if routes:
-				result = result.where(so.route.isin(routes))
+				query = query.where(so.route.isin(routes))
+			if exclude:
+				query = query.where(soi.name.notin(exclude))
 
-			orders += result.run(as_dict=True) or []
+			query = query.orderby(so.transaction_date)
 
+			orders += query.run(as_dict=True) or []
+
+		# Group the results
 		order_dict = {}
 		order_details = {}
 		for order in orders:
@@ -332,7 +337,7 @@ class VehicleAllocation(Document):
 					"date": order.get("date"),
 					"company": order.get("company"),
 					"transaction_date": order.get("transaction_date"),
-					"route": order.get("route", ""), 
+					"route": order.get("route", ""),
 				},
 			)
 			order_details.setdefault(order.get("sales_order"), [])
@@ -345,7 +350,7 @@ class VehicleAllocation(Document):
 					"uom": order.get("uom"),
 					"stock_qty": order.get("stock_qty"),
 					"weight": order.get("weight"),
-					"volume":order.get("volume"),
+					"volume": order.get("volume"),
 					"sales_order": order.get("sales_order"),
 					"customer": order.get("customer"),
 					"date": order.get("date"),
@@ -356,8 +361,8 @@ class VehicleAllocation(Document):
 				}
 			)
 
-
 		return {"orders": list(order_dict.values()), "items": order_details}
+
 
 
 	@frappe.whitelist()
