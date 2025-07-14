@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Wahni IT Solutions Pvt Ltd and contributors
+# Copyright (c) 2025, Craft Interactive Technologies 
 # For license information, please see license.txt
 
 import frappe
@@ -363,54 +363,77 @@ class VehicleAllocation(Document):
 
 		return {"orders": list(order_dict.values()), "items": order_details}
 
-
-
 	@frappe.whitelist()
 	def generate_delivery_note(self):
-		sales_order_map = {}
-		row_qty_map = {}
+		customer_rows = {}
+		qty_map = {}
 
+		# Group order rows by customer and prepare qty map
 		for row in self.orders:
-			if not row.delivery_note_reference:
-				sales_order_map.setdefault(row.sales_order, []).append(row.sales_order_detail)
-				row_qty_map[row.sales_order_detail] = row.allocated_qty
-
-		if not sales_order_map:
-			frappe.throw("All rows already have Delivery Notes.")
-
-		for sales_order, order_details in sales_order_map.items():
-			existing_dn = frappe.get_all(
-				"Delivery Note",
-				filters={
-					"docstatus": ("<", 2),
-					"custom_against_sales_order": sales_order
-				},
-				fields=["name"],
-				limit=1
-			)
+			# Check if already has a DN
+			existing_dn = frappe.db.get_value("Delivery Note Item", {
+				"so_detail": row.sales_order_detail,
+				"against_sales_order": row.sales_order,
+				"docstatus": ["<", 2]
+			}, "parent")
 
 			if existing_dn:
-				dn = frappe.get_doc("Delivery Note", existing_dn[0].name)
+				dn = frappe.get_doc("Delivery Note", existing_dn)
 				dn.custom_vehicle_allocation = self.name
+				row.delivery_note_reference = existing_dn
+				dn.save(ignore_permissions=True)
+				self.save()
+				frappe.db.commit() 
+				self.reload()
+				continue
+  
+
+
+			customer_rows.setdefault(row.customer, []).append(row)
+			qty_map[row.sales_order_detail] = row.allocated_qty
+
+		if not customer_rows:
+			frappe.throw("All rows already have Delivery Notes.")
+
+		# Create consolidated DN for each customer
+		for customer, rows in customer_rows.items():
+			sorted_sos = sorted(
+				set(r.sales_order for r in rows),
+				key=lambda so: frappe.db.get_value("Sales Order", so, "transaction_date")
+			)
+
+			dn = None
+
+			for so in sorted_sos:
+				item_ids = [r.sales_order_detail for r in rows if r.sales_order == so]
+				part_dn = self.make_delivery_note(so, item_ids, qty_map)
+
+				if not dn:
+					dn = part_dn
+				else:
+					for item in part_dn.items:
+						dn.append("items", item.as_dict())
+
+			if dn:
+				dn.customer = customer
+				dn.custom_vehicle_allocation = self.name
+				dn.custom_against_sales_order = ", ".join(sorted_sos)
+				dn.driver = self.driver
+				dn.vehicle_no = self.vehicle
+
+				# ✅ Reset line item numbering
+				for i, item in enumerate(dn.items, start=1):
+					item.idx = i
+
 				dn.save(ignore_permissions=True)
 
-				for row in self.orders:
-					if row.sales_order == sales_order and row.sales_order_detail in order_details:
-						row.delivery_note_reference = dn.name
+				# Update reference in Vehicle Allocation
+				for row in rows:
+					row.delivery_note_reference = dn.name
 
-			else:
-				dn = self.make_delivery_note(sales_order, order_details, row_qty_map)
-
-				if dn and dn.items:
-					dn.custom_vehicle_allocation = self.name
-					dn.save(ignore_permissions=True)
-
-					for row in self.orders:
-						if row.sales_order == sales_order and row.sales_order_detail in order_details:
-							row.delivery_note_reference = dn.name
-       
 		self.save(ignore_permissions=True)
 		frappe.publish_realtime("delivery_note_generation")
+
 
 
 
@@ -478,25 +501,25 @@ def generate_invoice(docname):
     
     
 @frappe.whitelist()
-def reallocate_order(source_doc, sales_order, target_allocation):
+def reallocate_customer(source_doc, customer, target_allocation):
     if source_doc == target_allocation:
         frappe.throw("Source and Target Vehicle Allocation cannot be the same.")
 
     source = frappe.get_doc("Vehicle Allocation", source_doc)
     target = frappe.get_doc("Vehicle Allocation", target_allocation)
-
-    rows_to_move = [row for row in source.orders if row.sales_order == sales_order]
+    rows_to_move = [row for row in source.orders if row.customer == customer]
 
     if not rows_to_move:
-        frappe.throw("No matching rows found for the selected Sales Order.")
-
+        frappe.throw(f"No matching rows found for customer {customer} in {source_doc}.")
+        
     existing_so_details = {row.sales_order_detail for row in target.orders}
     duplicates = [row.sales_order_detail for row in rows_to_move if row.sales_order_detail in existing_so_details]
 
     if duplicates:
-        frappe.throw(f"The selected Sales Orders are already allocated in {target_allocation}")
+        frappe.throw(f"Some Sales Order Items already exist in {target_allocation}: {', '.join(duplicates)}")
 
     for row in rows_to_move:
+        # Append to target
         target.append("orders", {
             "sales_order": row.sales_order,
             "sales_order_detail": row.sales_order_detail,
@@ -514,12 +537,15 @@ def reallocate_order(source_doc, sales_order, target_allocation):
             "allocated_weight": row.allocated_weight,
         })
 
+        # Update existing DN's allocation reference
         delivery_notes = frappe.get_all(
             "Delivery Note",
             filters={
-                "custom_against_sales_order": row.sales_order,
                 "custom_vehicle_allocation": source_doc,
                 "docstatus": ["<", 2]
+            },
+            or_filters={
+                "customer": customer
             },
             pluck="name"
         )
@@ -529,9 +555,10 @@ def reallocate_order(source_doc, sales_order, target_allocation):
             dn_doc.custom_vehicle_allocation = target_allocation
             dn_doc.save(ignore_permissions=True)
 
+        # Remove from source
         source.remove(row)
 
-    # Recalculate allocation values for both docs
+    # Recalculate totals
     source.calculate_allocated_qty()
     target.calculate_allocated_qty()
     source.update_allocated_qty()
@@ -541,17 +568,20 @@ def reallocate_order(source_doc, sales_order, target_allocation):
     target.save(ignore_version=True)
     frappe.db.commit()
 
+    frappe.msgprint(f"All orders for customer {customer} moved to Vehicle Allocation {target_allocation}")
 
-    frappe.msgprint(f"Sales Order {sales_order} moved to Vehicle Allocation {target_allocation}")
     
     
 @frappe.whitelist()
-def remove_sales_order(docname, sales_order):
+def remove_customer_orders(docname, customer):
     doc = frappe.get_doc("Vehicle Allocation", docname)
-    rows_to_remove = [row for row in doc.orders if row.sales_order == sales_order]
+    rows_to_remove = [row for row in doc.orders if row.customer == customer]
 
     if not rows_to_remove:
-        frappe.throw(f"No rows found for Sales Order {sales_order} in Vehicle Allocation {docname}.")
+        frappe.throw(f"No rows found for Customer {customer} in Vehicle Allocation {docname}.")
+
+    sales_order_details = [row.sales_order_detail for row in rows_to_remove]
+    sales_orders = list(set(row.sales_order for row in rows_to_remove))
 
     for row in rows_to_remove:
         if row.sales_order_detail:
@@ -560,13 +590,13 @@ def remove_sales_order(docname, sales_order):
             frappe.db.set_value("Sales Order Item", row.sales_order_detail, "allocated_qty", updated_allocated)
 
         doc.remove(row)
-
+ 
     dn_list = frappe.get_all(
         "Delivery Note",
         filters={
             "custom_vehicle_allocation": docname,
-            "custom_against_sales_order": sales_order,
-            "docstatus": ["<", 2] 
+            "docstatus": ["<", 2],
+            "customer": customer
         },
         pluck="name"
     )
@@ -579,12 +609,11 @@ def remove_sales_order(docname, sales_order):
     # Recalculate allocation values after removal
     doc.calculate_allocated_qty()
     doc.update_allocated_qty()
-
     doc.save(ignore_permissions=True)
     frappe.db.commit()
 
+    frappe.msgprint(f"All orders for customer {customer} removed from Vehicle Allocation {docname} and unlinked from delivery note.")
 
-    frappe.msgprint(f"Sales Order {sales_order} removed from Vehicle Allocation {docname} and unlinked from delivery note")
 
 
 

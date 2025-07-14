@@ -30,19 +30,19 @@ frappe.ui.form.on("Vehicle Allocation", {
 		}
 		if (frm.doc.docstatus === 1) {
             frm.add_custom_button(__('Reallocate Order'), () => {
-                let options = (frm.doc.orders || []).map(d => d.sales_order);
+                let customers = [...new Set((frm.doc.orders || []).map(d => d.customer))];
 
                 const dialog = new frappe.ui.Dialog({
                     title: 'Reallocate Order',
                     fields: [
                         {
-                            fieldname: 'sales_order',
-                            label: 'Sales Order',
+                            fieldname: 'customer',
+                            label: 'Customer',
                             fieldtype: 'Link',
-                            options: 'Sales Order',
+                            options: 'Customer',
                             reqd: 1,
                             get_query: () => ({
-                                filters: [['name', 'in', options]]
+                                filters: [['name', 'in', customers]]
                             })
                         },
                         {
@@ -59,16 +59,17 @@ frappe.ui.form.on("Vehicle Allocation", {
                     primary_action_label: 'Reallocate',
                     primary_action(values) {
                         frappe.call({
-                            method: 'vms.vms.doctype.vehicle_allocation.vehicle_allocation.reallocate_order',
+                            method: 'vms.vms.doctype.vehicle_allocation.vehicle_allocation.reallocate_customer',
                             args: {
                                 source_doc: frm.doc.name,
-                                sales_order: values.sales_order,
+                                customer: values.customer,
                                 target_allocation: values.target_allocation
                             },
                             callback: function (r) {
                                 if (!r.exc) {
-                                    frappe.msgprint('Order reallocated successfully');
+                                    frappe.msgprint('Reallocated successfully');
                                     dialog.hide();
+                                    frm.reload_doc();
                                 }
                             }
                         });
@@ -78,44 +79,46 @@ frappe.ui.form.on("Vehicle Allocation", {
                 dialog.show();
             });
         }
-        if (frm.doc.docstatus === 1) {
-            frm.add_custom_button(__('Remove Sales Orders'), () => {
-                let dialog = new frappe.ui.Dialog({
-                    title: 'Remove Sales Order',
-                    fields: [
-                        {
-                            label: 'Sales Order',
-                            fieldname: 'sales_order',
-                            fieldtype: 'Link',
-                            options: 'Sales Order',
-                            reqd: 1,
-                            get_query: () => ({
-                                filters: [
-                                    ['name', 'in', (frm.doc.orders || []).map(row => row.sales_order)]
-                                ]
-                            })
-                        }
-                    ],
-                    primary_action_label: 'Remove',
-                    primary_action(values) {
-                        frappe.call({
-                            method: 'vms.vms.doctype.vehicle_allocation.vehicle_allocation.remove_sales_order',
-                            args: {
-                                docname: frm.doc.name,
-                                sales_order: values.sales_order
-                            },
-                            callback: function () {
-                                frappe.msgprint(__('Sales Order removed successfully'));
-                                dialog.hide();
-                                frm.reload_doc();
-                            }
-                        });
-                    }
-                });
 
-                dialog.show();
+    if (frm.doc.docstatus === 1) {
+        frm.add_custom_button(__('Remove Orders'), () => {
+            let customers = [...new Set((frm.doc.orders || []).map(d => d.customer))];
+
+            let dialog = new frappe.ui.Dialog({
+                title: 'Remove Orders ',
+                fields: [
+                    {
+                        label: 'Customer',
+                        fieldname: 'customer',
+                        fieldtype: 'Link',
+                        options: 'Customer',
+                        reqd: 1,
+                        get_query: () => ({
+                            filters: [['name', 'in', customers]]
+                        })
+                    }
+                ],
+                primary_action_label: 'Remove',
+                primary_action(values) {
+                    frappe.call({
+                        method: 'vms.vms.doctype.vehicle_allocation.vehicle_allocation.remove_customer_orders',
+                        args: {
+                            docname: frm.doc.name,
+                            customer: values.customer
+                        },
+                        callback: function () {
+                            frappe.msgprint(__('Removed successfully'));
+                            dialog.hide();
+                            frm.reload_doc();
+                        }
+                    });
+                }
             });
-        }
+
+            dialog.show();
+        });
+    }
+
     
 		// if (frm.doc.docstatus === 1) {
         //     frm.add_custom_button(__('Generate Sales Invoice'), function() {
